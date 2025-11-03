@@ -50,11 +50,8 @@ def cargar_modelos():
         # Usar modelo más pequeño y simple para Streamlit Cloud
         model_name = "google/flan-t5-small"
         tokenizer = AutoTokenizer.from_pretrained(model_name)
-        modelo = AutoModelForSeq2SeqLM.from_pretrained(
-            model_name,
-            low_cpu_mem_usage=True,
-            torch_dtype=torch.float32
-        )
+        modelo = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+    modelo.eval()  # Poner el modelo en modo evaluación
 
     # Devolver también la matriz de embeddings X para poder calcular similitudes
     return chunks, modelo_emb, X, index, tokenizer, modelo
@@ -90,26 +87,23 @@ def responder(pregunta, chunks, modelo_emb, X, index, tokenizer, modelo, top_k=3
     # Preparar contexto para el modelo
     contexto = "\n".join(chunks[idx]["texto"] for idx in top_indices)
     
-    # Generar prompt directo y específico
-    prompt = f"Responde exactamente según la normativa del MINAM:\nPregunta: {pregunta}\nContexto: {contexto}\nRespuesta oficial:"
+    # Prompt simple y directo
+    prompt = f"Basándote en este contexto: {contexto}\n\nResponde a esta pregunta: {pregunta}\n\nRespuesta:"
     
     # Tokenizar
     inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512)
     
-    # Generar respuesta con parámetros optimizados para rendimiento
-    outputs = modelo.generate(
-        **inputs,
-        max_length=150,
-        min_length=30,
-        num_beams=3,
-        temperature=0.3,
-        no_repeat_ngram_size=3,
-        do_sample=False,
-        early_stopping=True,
-        length_penalty=1.0,
-        pad_token_id=tokenizer.pad_token_id,
-        use_cache=True
-    )
+    # Generar respuesta con parámetros simples y robustos
+    with torch.no_grad():  # Desactivar gradientes para inferencia
+        outputs = modelo.generate(
+            **inputs,
+            max_length=200,  # Permitir respuestas más largas
+            min_length=20,
+            num_beams=1,     # Búsqueda más simple
+            temperature=0.1,  # Más determinista
+            do_sample=False,
+            early_stopping=True
+        )
     
     # Decodificar respuesta
     respuesta = tokenizer.decode(outputs[0], skip_special_tokens=True)
