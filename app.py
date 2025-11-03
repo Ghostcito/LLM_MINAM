@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import faiss
+import torch
 from sentence_transformers import SentenceTransformer
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import streamlit as st
@@ -46,13 +47,13 @@ def cargar_modelos():
     
     with st.spinner('Cargando modelo de lenguaje...'):
         # === 4️⃣ Modelo de lenguaje ===
-        # Usar modelo pequeño T5 para Streamlit Cloud
-        model_name = "google/flan-t5-small"  # Cambiamos a small para mejor rendimiento
+        # Usar modelo más pequeño y simple para Streamlit Cloud
+        model_name = "google/flan-t5-small"
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         modelo = AutoModelForSeq2SeqLM.from_pretrained(
             model_name,
-            device_map='auto',
-            torch_dtype='auto'
+            low_cpu_mem_usage=True,
+            torch_dtype=torch.float32
         )
 
     # Devolver también la matriz de embeddings X para poder calcular similitudes
